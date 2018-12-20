@@ -1578,6 +1578,11 @@ class AnimAssistant(object):
 
         mc.modelPanel(focusMP, e=1, cam=currentCam)
 
+    def getCurrentSceneDirectory(self):
+        filepath = cmds.file(q=True, sn=True)
+        fileDirectory = os.path.dirname(filepath)
+        return fileDirectory
+
     def exportSetup(self, *args):
         path = mc.textField(self.PBpathTextField, q=1, tx=1)
 
@@ -1588,10 +1593,10 @@ class AnimAssistant(object):
             AAData = mc.getAttr('AANode.data')
             if AAData:
                 valDict = ast.literal_eval(AAData)
-        print(path + 'blastSetup.txt');
-        print('valDict')
-        print(valDict)
-        with open(path + '/blastSetup.txt', 'w') as outfile:
+
+    print(valDict)
+
+    with open(getCurrentSceneDirectory() + '/blastSetup.txt', 'w') as outfile:
             for i, k in valDict.items():
                 print(k)
                 resultString = str(k[1]) + " " + str(k[2]) + " " + str(k[0] + '\n')
@@ -1600,7 +1605,22 @@ class AnimAssistant(object):
         outfile.close()
 
     def importSetup(self, *args):
-        path = mc.textField(self.PBpathTextField, q=1, tx=1)
+        txtFilesInWorkingDir = []
+        txtFile = '';
+        workingDirectory = self.getCurrentSceneDirectory()
+        for file in os.listdir(workingDirectory):
+            if file.endswith(".txt"):
+                txtFilesInWorkingDir.append(file)
+                txtFile = str(file)
+
+        if txtFilesInWorkingDir > 1:
+            easygui.msgbox("More than one txt file in working dir", title="Error")
+            return
+        elif txtFilesInWorkingDir == 0:
+            easygui.msgbox("No txt files in working dir", title="Error")
+            return
+
+        configFilePath = os.path.join(workingDirectory, txtFile)
         valDict = {}
         fileContent = {}
         cArray = mc.scrollLayout(self.mScrollLayout, q=1, ca=1)
@@ -1610,7 +1630,8 @@ class AnimAssistant(object):
         counter = 0
 
         mu.executeDeferred(self.addNewLine, 'create')
-        with open(path + '/blastSetup.txt', 'r') as outfile:
+
+        with open(configFilePath, 'r') as outfile:
             fileContent = outfile.readlines()
 
         for line in fileContent:
