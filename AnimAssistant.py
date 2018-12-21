@@ -682,6 +682,9 @@ class AnimAssistant(object):
                 mc.iconTextButton(self.colDict['self.lineNumber' + str(a)], e=1, l="> " + str(a).zfill(3))
 
         self.restyleButtons(AAlineNum, 'bold')
+        stringData = filteredDict[num]
+        mc.currentTime(stringData[1])
+        mc.playbackOptions(min=stringData[1], max=stringData[2])
 
         # Change the range if mode 'range' set
         if mode == 'range' and AAlineNum:
