@@ -10,7 +10,7 @@ AnimAssistant.start()
 '''
 
 import maya.cmds as mc
-import os
+import os as os
 from os.path import dirname, abspath
 from functools import partial
 from collections import OrderedDict
