@@ -1578,7 +1578,7 @@ class AnimAssistant(object):
         mc.modelPanel(focusMP, e=1, cam=currentCam)
 
     def getCurrentDirectory(self):
-        return dirname(dirname(abspath(mc.file(q=True, sn=True))))
+        return dirname(abspath(mc.file(q=True, sn=True)))
 
     def exportSetup(self, *args):
         path = mc.textField(self.PBpathTextField, q=1, tx=1)
@@ -1601,7 +1601,8 @@ class AnimAssistant(object):
         txtFilesInWorkingDir = []
         txtFile = '';
         workingDirectory = self.getCurrentDirectory()
-
+        print('Search for config in:')
+        print(workingDirectory)
         for file in os.listdir(workingDirectory):
 
             if file.endswith(".txt"):
