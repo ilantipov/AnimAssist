@@ -10,7 +10,8 @@ AnimAssistant.start()
 '''
 
 import maya.cmds as mc
-import json
+import traceback
+from os.path import dirname, abspath
 from functools import partial
 from collections import OrderedDict
 import maya.mel as mel
@@ -240,19 +241,15 @@ class AnimAssistant(object):
             self.currentCameraControl = mc.checkBox(label=k, align='left', p=self.generalLayout);
             self.checkboxList[k] = self.currentCameraControl
             if counter == 0:
-                print('attach to PBcamTextField')
                 mc.formLayout(self.generalLayout, e=1, ac=(self.PBcamTextField, 'bottom', 2, self.currentCameraControl))
             else:
-                print('attach to prevCameraControl')
                 mc.formLayout(self.generalLayout, e=1, ac=(prevCameraControl, 'bottom', 2, self.currentCameraControl))
 
             mc.formLayout(self.generalLayout, e=1, af=(self.currentCameraControl, 'bottom', 3))
             mc.formLayout(self.generalLayout, e=1, af=(self.currentCameraControl, 'right', 3))
             mc.formLayout(self.generalLayout, e=1, af=(self.currentCameraControl, 'left', 3))
-            print(self.currentCameraControl);
 
-            if counter > 0:
-                print('attach to prev control' + prevCameraControl)
+
             prevCameraControl = self.currentCameraControl
             counter += 1
             # mc.formLayout(self.generalLayout, e=1, ac=( self.mScrollLayout, 'top', 2, self.CameraControl ) )
@@ -902,14 +899,15 @@ class AnimAssistant(object):
         mc.menuItem(l='Export', c=partial(self.exportSetup))
         mc.menuItem(l='Import', c=partial(self.importSetup))
         # Create single color editor of the line
+        print(colorVal)
         self.colDict['self.canvasLine' + str(nI)] = mc.iconTextButton(l='', w=10, h=self.Lheight,
-                                                                      bgc=(colorVal[0], colorVal[1], colorVal[2]),
+                                                                      bgc=(float(colorVal[0]), float(colorVal[1]), float(colorVal[2])),
                                                                       c=partial(self.changeColor, nI),
                                                                       p=self.colDict['self.mainLine' + str(nI)])
 
         # Create single form Line for each line
         self.colDict['self.formLine' + str(nI)] = mc.formLayout(h=self.Lheight,
-                                                                bgc=(colorVal[0], colorVal[1], colorVal[2]),
+                                                                bgc=(float(colorVal[0]), float(colorVal[1]), float(colorVal[2])),
                                                                 p=self.colDict['self.mainLine' + str(nI)])
 
         # Create single number button which indicates order of the line
@@ -1478,7 +1476,8 @@ class AnimAssistant(object):
     def playBlastCom(self, mode, part):
 
         if mode == 'setup':
-            mc.playblast(options=1)
+            mc.playblast(options=True)
+            return
 
         for k, v in self.checkboxList.items():
             if cmds.checkBox(str(v), query=True, value=True):
@@ -1578,72 +1577,73 @@ class AnimAssistant(object):
 
         mc.modelPanel(focusMP, e=1, cam=currentCam)
 
-    def getCurrentSceneDirectory(self):
-        filepath = cmds.file(q=True, sn=True)
-        fileDirectory = os.path.dirname(filepath)
-        return fileDirectory
+    def getCurrentDirectory(self):
+        return dirname(dirname(abspath(mc.file(q=True, sn=True))))
 
     def exportSetup(self, *args):
         path = mc.textField(self.PBpathTextField, q=1, tx=1)
 
-        if len(path) == 0:
-            return
         valDict = {}
         if mc.objExists('AANode'):
             AAData = mc.getAttr('AANode.data')
             if AAData:
                 valDict = ast.literal_eval(AAData)
 
-    print(valDict)
 
-    with open(getCurrentSceneDirectory() + '/blastSetup.txt', 'w') as outfile:
-            for i, k in valDict.items():
-                print(k)
-                resultString = str(k[1]) + " " + str(k[2]) + " " + str(k[0] + '\n')
-                print(resultString)
-                outfile.write(resultString)
+        with open(self.getCurrentDirectory() + '/blastSetup.txt', 'w') as outfile:
+                for i, k in valDict.items():
+                    resultString = str(k[1]) + " " + str(k[2]) + " " + str(k[0] + '\n')
+                    outfile.write(resultString)
         outfile.close()
 
     def importSetup(self, *args):
+        global AAlineNum
         txtFilesInWorkingDir = []
         txtFile = '';
-        workingDirectory = self.getCurrentSceneDirectory()
+        workingDirectory = self.getCurrentDirectory()
+
         for file in os.listdir(workingDirectory):
+
             if file.endswith(".txt"):
+
                 txtFilesInWorkingDir.append(file)
                 txtFile = str(file)
 
-        if txtFilesInWorkingDir > 1:
-            easygui.msgbox("More than one txt file in working dir", title="Error")
+        if len(txtFilesInWorkingDir) > 1:
+            mc.confirmDialog(message="В каталоге сцены обнаружено несколько текстовых файлов. Оставьте только один с настройками", button=["ok"])
             return
-        elif txtFilesInWorkingDir == 0:
-            easygui.msgbox("No txt files in working dir", title="Error")
+        elif len(txtFilesInWorkingDir) == 0:
+            mc.confirmDialog(message="Текстовых файлов в каталоге сцены не обнаружено", button=["ok"])
             return
 
         configFilePath = os.path.join(workingDirectory, txtFile)
-        valDict = {}
-        fileContent = {}
-        cArray = mc.scrollLayout(self.mScrollLayout, q=1, ca=1)
-        mu.executeDeferred('mc.deleteUI( ' + str(cArray) + ', lay=1 )')
 
-        color = [0.16, 0.16, 0.16]
+        #cArray = mc.scrollLayout(self.mScrollLayout, q=1, ca=1)
+        #mu.executeDeferred('mc.deleteUI( ' + str(cArray) + ', lay=1 )')
+
+        color = (float(0.16), float(0.16), float(0.16))
         counter = 0
-
-        mu.executeDeferred(self.addNewLine, 'create')
 
         with open(configFilePath, 'r') as outfile:
             fileContent = outfile.readlines()
 
+        NewsortDict = {}
+        lineCount = 0
         for line in fileContent:
             setup = line.split()
             counter += 1
-            print
             start = setup[0]
             end = setup[1]
             name = setup[2:]
             printName = ' '.join(name)
+            lineList = [printName, start, end, color]
+            NewsortDict[lineCount] = lineList
+            lineCount += 1
 
-            mu.executeDeferred(self.revealNewLine, counter, printName, start, end, color)
+        AAlineNum = []
+        self.selectHighlight('select', -1)
+        mc.setAttr('AANode.data', NewsortDict, type='string')
+        self.filterNames()
 
     def storeTakes(self, part):
         valDict = {}
