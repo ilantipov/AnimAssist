@@ -1631,7 +1631,10 @@ class AnimAssistant(object):
         NewsortDict = {}
         lineCount = 0
         for line in fileContent:
+            print(line)
             setup = line.split()
+            if not setup:
+                continue
             counter += 1
             start = setup[0]
             end = setup[1]
